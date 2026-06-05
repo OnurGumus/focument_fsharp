@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Values.fs" />
+    <Compile Include="Document.fs" />
+    <Compile Include="User.fs" />
+    <Compile Include="QuotaSaga.fs" />
+    <Compile Include="ReadModel.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FCQRS" Version="6.0.0-preview13" />
+    <PackageReference Include="FCQRS.Model" Version="6.0.0-*" />
+  </ItemGroup>
+
+</Project>

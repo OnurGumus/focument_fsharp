@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Domain/Domain.fsproj" />
+    <Project Path="src/Web/Web.fsproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Domain.Tests/Domain.Tests.fsproj" />
+  </Folder>
+</Solution>
