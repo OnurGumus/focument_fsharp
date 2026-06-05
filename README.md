@@ -63,7 +63,8 @@ her own. Edit a document to bump its version; open history to restore an old ver
 ## Test
 
 ```bash
-dotnet test tests/Domain.Tests        # 11 tests: pure decide/fold + quota window + an integration boot
+# Expecto console runner (no VSTest adapter) — run the exe, exit code = pass/fail:
+dotnet run --project tests/Domain.Tests   # 13 tests: pure decide/fold + quota window + integration (quota, reject, restore)
 ```
 
 ## FCQRS reference
