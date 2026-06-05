@@ -49,9 +49,9 @@ let private applySideEffects documentFactory userFactory sagaState _recovering =
     | Holding _ -> Stay, [ toOriginator documentFactory Document.Hold ]
     | Done -> StopSaga, []
 
-let startsOn evt =
-    match evt with
-    | DocEvent(Document.CreateOrUpdateRequested _) -> true
+let startsOn (e: Event<Document.Event>) =
+    match e.EventDetails with
+    | Document.CreateOrUpdateRequested _ -> true
     | _ -> false
 
 /// Build the saga definition once the two aggregates' factories are known

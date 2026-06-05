@@ -25,7 +25,7 @@ let build config loggerFactory connString =
     // The saga is built from the two aggregates' factories (cross-reference
     // resolved by ordinary scope), then registered and wired into the starter.
     let quota =
-        Fcqrs.saga<_, _, Document.Event> api (QuotaSaga.definition documents.Factory users.Factory)
+        Fcqrs.saga api (QuotaSaga.definition documents.Factory users.Factory)
 
     Fcqrs.wireSagaStarters api [ quota ]
 

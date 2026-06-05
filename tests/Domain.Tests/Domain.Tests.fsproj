@@ -16,7 +16,7 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <ProjectReference Include="..\..\src\Domain\Domain.fsproj" />
     <ProjectReference Include="..\..\src\Web\Web.fsproj" />
-    <PackageReference Include="FCQRS" Version="6.0.0-preview13" />
+    <PackageReference Include="FCQRS" Version="6.0.0-preview14" />
     <PackageReference Include="Expecto" Version="10.*" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.*" />
   </ItemGroup>
