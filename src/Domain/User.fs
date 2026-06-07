@@ -34,7 +34,9 @@ let decide (cmd: Command<_>) state=
     | ConsumeQuota docId ->
         match state.Consumed |> List.tryFind (fun c -> c.DocId = docId) with
         // Re-delivery: this document already holds a slot — re-grant the SAME slot.
-        | Some existing -> QuotaApproved(docId, existing.At) |> PersistEvent
+        // An idempotent no-op on state, so Defer: re-deliver to the saga without
+        // journaling a duplicate the fold would only ignore.
+        | Some existing -> QuotaApproved(docId, existing.At) |> DeferEvent
         | None ->
             // Only slots within the window count.
             if prune cmd.CreationDate state.Consumed |> List.length < Limit then
