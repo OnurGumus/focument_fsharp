@@ -43,7 +43,9 @@ type Endpoints
         Reply.respond (
             asyncResult {
                 let! f = ctx.Request.ReadFormAsync() |> Async.AwaitTask
-                let! (owner: Username) = ValueLens.TryCreate (string f.["Username"]) |> Result.mapError ((+) "Error: ")
+                let! (owner: Username) =
+                    ValueLens.TryCreate (string f.["Username"])
+                    |> Result.mapError ((+) "Error: ")
 
                 let existingId = f.["Id"].ToString()
                 let docId = if String.IsNullOrEmpty existingId then Guid.NewGuid() else Guid.Parse existingId
@@ -80,7 +82,9 @@ type Endpoints
             asyncResult {
                 let! f = ctx.Request.ReadFormAsync() |> Async.AwaitTask
                 let docId = f.["Id"].ToString()
-                let! (owner: Username) = ValueLens.TryCreate (string f.["Username"]) |> Result.mapError ((+) "Error: ")
+                let! (owner: Username) =
+                    ValueLens.TryCreate (string f.["Username"])
+                    |> Result.mapError ((+) "Error: ")
 
                 let! guid =
                     match Guid.TryParse docId with
@@ -127,7 +131,9 @@ type Endpoints
                 let docId = f.["Id"].ToString()
                 let username = f.["Username"].ToString()
 
-                let! (_: Username) = ValueLens.TryCreate username |> Result.mapError ((+) "Error: ")
+                let! (_: Username) =
+                    ValueLens.TryCreate username
+                    |> Result.mapError ((+) "Error: ")
                 do! match Guid.TryParse docId with
                      | true, _ -> Ok()
                      | _ -> Error "Error: invalid document id"
