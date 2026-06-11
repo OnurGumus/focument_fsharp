@@ -40,123 +40,120 @@ type Endpoints
 
     /// Create a new document (quota-gated via the saga) or edit an existing one.
     member _.CreateOrUpdate(ctx: HttpContext) =
-        Reply.respond (
-            asyncResult {
-                let! f = ctx.Request.ReadFormAsync() |> Async.AwaitTask
-                let! (owner: Username) =
-                    string f.["Username"]
-                    |> ValueLens.TryCreate
-                    |> Result.mapError ((+) "Error: ")
+        asyncResult {
+            let! f = ctx.Request.ReadFormAsync() |> Async.AwaitTask
+            let! (owner: Username) =
+                string f.["Username"]
+                |> ValueLens.TryCreate
+                |> Result.mapError ((+) "Error: ")
 
-                let existingId = f.["Id"].ToString()
-                let docId = if String.IsNullOrEmpty existingId then Guid.NewGuid() else Guid.Parse existingId
-                let! doc = Document.Root.TryCreate(docId, f.["Title"].ToString(), f.["Content"].ToString()) |> Result.mapError (fun e -> $"Error: {e}")
+            let existingId = f.["Id"].ToString()
+            let docId = if String.IsNullOrEmpty existingId then Guid.NewGuid() else Guid.Parse existingId
+            let! doc = Document.Root.TryCreate(docId, f.["Title"].ToString(), f.["Content"].ToString()) |> Result.mapError (fun e -> $"Error: {e}")
 
-                let cid = Fcqrs.newCid ()
-                let aggId = Fcqrs.aggregateId (string docId)
-                // Subscribe before sending so we can wait for the read model to catch
-                // up. The projection notifies only terminal events, so one is enough.
-                use awaiter = subscriptions.Subscribe(cid, 1)
+            let cid = Fcqrs.newCid ()
+            let aggId = Fcqrs.aggregateId (string docId)
+            // Subscribe before sending so we can wait for the read model to catch
+            // up. The projection notifies only terminal events, so one is enough.
+            use awaiter = subscriptions.Subscribe(cid, 1)
 
-                let! result =
-                    documents.Send cid aggId (Document.CreateOrUpdate(doc, owner)) (fun e ->
-                        match e with
-                        | Document.ApprovedEvt _
-                        | Document.HeldForApproval _
-                        | Document.Updated _ -> true
-                        | _ -> false)
+            let! result =
+                documents.Send cid aggId (Document.CreateOrUpdate(doc, owner)) (fun e ->
+                    match e with
+                    | Document.ApprovedEvt _
+                    | Document.HeldForApproval _
+                    | Document.Updated _ -> true
+                    | _ -> false)
 
-                do! awaiter.Task |> Async.AwaitTask
+            do! awaiter.Task |> Async.AwaitTask
 
-                return
-                    match result.EventDetails with
-                    | Document.HeldForApproval _ -> "Quota exceeded — sent for approval."
-                    | Document.Updated _ -> "Document updated!"
-                    | _ -> "Document saved!"
-            }
-        )
+            return
+                match result.EventDetails with
+                | Document.HeldForApproval _ -> "Quota exceeded — sent for approval."
+                | Document.Updated _ -> "Document updated!"
+                | _ -> "Document saved!"
+        }
+        |> Reply.respond
 
     /// Restore an earlier version by re-issuing its content as a plain edit
     /// (Updated) — no quota, no saga.
     member _.Restore(ctx: HttpContext) =
-        Reply.respond (
-            asyncResult {
-                let! f = ctx.Request.ReadFormAsync() |> Async.AwaitTask
-                let docId = f.["Id"].ToString()
-                let! (owner: Username) =
-                    string f.["Username"]
-                    |> ValueLens.TryCreate
-                    |> Result.mapError ((+) "Error: ")
+        asyncResult {
+            let! f = ctx.Request.ReadFormAsync() |> Async.AwaitTask
+            let docId = f.["Id"].ToString()
+            let! (owner: Username) =
+                string f.["Username"]
+                |> ValueLens.TryCreate
+                |> Result.mapError ((+) "Error: ")
 
-                let! guid =
-                    match Guid.TryParse docId with
-                    | true, g -> Ok g
-                    | _ -> Error "Error: invalid document id"
+            let! guid =
+                match Guid.TryParse docId with
+                | true, g -> Ok g
+                | _ -> Error "Error: invalid document id"
 
-                let! version =
-                    match Int64.TryParse(f.["Version"].ToString()) with
-                    | true, v -> Ok v
-                    | _ -> Error "Error: invalid version"
+            let! version =
+                match Int64.TryParse(f.["Version"].ToString()) with
+                | true, v -> Ok v
+                | _ -> Error "Error: invalid version"
 
-                let! snapshot =
-                    Db.getDocumentHistory connString docId
-                    |> Array.tryFind (fun v -> v.Version = version)
-                    |> Result.requireSome "Error: version not found"
+            let! snapshot =
+                Db.getDocumentHistory connString docId
+                |> Array.tryFind (fun v -> v.Version = version)
+                |> Result.requireSome "Error: version not found"
 
-                let! doc = Document.Root.TryCreate(guid, snapshot.Title, snapshot.Body) |> Result.mapError (fun e -> $"Error: {e}")
+            let! doc = Document.Root.TryCreate(guid, snapshot.Title, snapshot.Body) |> Result.mapError (fun e -> $"Error: {e}")
 
-                let cid = Fcqrs.newCid ()
-                let aggId = Fcqrs.aggregateId docId
-                use awaiter = subscriptions.Subscribe(cid, 1)
+            let cid = Fcqrs.newCid ()
+            let aggId = Fcqrs.aggregateId docId
+            use awaiter = subscriptions.Subscribe(cid, 1)
 
-                let! _ =
-                    documents.Send cid aggId (Document.CreateOrUpdate(doc, owner)) (fun e ->
-                        match e with
-                        | Document.Updated _
-                        | Document.ApprovedEvt _
-                        | Document.HeldForApproval _ -> true
-                        | _ -> false)
+            let! _ =
+                documents.Send cid aggId (Document.CreateOrUpdate(doc, owner)) (fun e ->
+                    match e with
+                    | Document.Updated _
+                    | Document.ApprovedEvt _
+                    | Document.HeldForApproval _ -> true
+                    | _ -> false)
 
-                do! awaiter.Task |> Async.AwaitTask
-                return "Version restored!"
-            }
-        )
+            do! awaiter.Task |> Async.AwaitTask
+            return "Version restored!"
+        }
+        |> Reply.respond
 
     /// A colleague approves or rejects a held (over-quota) document. The owner
     /// can't decide their own.
     member _.Review(approve, ctx: HttpContext) =
         let verb = if approve then "approve" else "reject"
 
-        Reply.respond (
-            asyncResult {
-                let! f = ctx.Request.ReadFormAsync() |> Async.AwaitTask
-                let docId = f.["Id"].ToString()
-                let username = f.["Username"].ToString()
+        asyncResult {
+            let! f = ctx.Request.ReadFormAsync() |> Async.AwaitTask
+            let docId = f.["Id"].ToString()
+            let username = f.["Username"].ToString()
 
-                let! (_: Username) =
-                    username
-                    |> ValueLens.TryCreate
-                    |> Result.mapError ((+) "Error: ")
-                do! match Guid.TryParse docId with
-                     | true, _ -> Ok()
-                     | _ -> Error "Error: invalid document id"
+            let! (_: Username) =
+                username
+                |> ValueLens.TryCreate
+                |> Result.mapError ((+) "Error: ")
+            do! match Guid.TryParse docId with
+                 | true, _ -> Ok()
+                 | _ -> Error "Error: invalid document id"
 
-                let! doc = Db.getDocument connString docId |> Result.requireSome "Error: document not found"
-                do! if doc.Owner = username then Error $"You can't {verb} your own document." else Ok()
+            let! doc = Db.getDocument connString docId |> Result.requireSome "Error: document not found"
+            do! if doc.Owner = username then Error $"You can't {verb} your own document." else Ok()
 
-                let cid = Fcqrs.newCid ()
-                let aggId = Fcqrs.aggregateId docId
-                use awaiter = subscriptions.Subscribe(cid, 1)
-                let command = if approve then Document.Approve else Document.Reject
+            let cid = Fcqrs.newCid ()
+            let aggId = Fcqrs.aggregateId docId
+            use awaiter = subscriptions.Subscribe(cid, 1)
+            let command = if approve then Document.Approve else Document.Reject
 
-                let! _ =
-                    documents.Send cid aggId command (fun e ->
-                        match e with
-                        | Document.ApprovedEvt _ -> approve
-                        | Document.RejectedEvt _ -> not approve
-                        | _ -> false)
+            let! _ =
+                documents.Send cid aggId command (fun e ->
+                    match e with
+                    | Document.ApprovedEvt _ -> approve
+                    | Document.RejectedEvt _ -> not approve
+                    | _ -> false)
 
-                do! awaiter.Task |> Async.AwaitTask
-                return if approve then "Approved!" else "Rejected."
-            }
-        )
+            do! awaiter.Task |> Async.AwaitTask
+            return if approve then "Approved!" else "Rejected."
+        }
+        |> Reply.respond
