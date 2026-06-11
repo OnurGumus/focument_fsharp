@@ -30,11 +30,11 @@ let main args =
 
     app.MapGet("/api/documents", Func<_>(fun () -> endpoints.GetDocuments())) |> ignore
     app.MapGet("/api/document/{id}/history", Func<HttpContext, _>(fun ctx -> endpoints.GetDocumentHistory ctx)) |> ignore
-    app.MapPost("/api/document", Func<HttpContext, _>(fun ctx -> endpoints.CreateOrUpdate ctx |> Async.StartAsTask)) |> ignore
-    app.MapPost("/api/document/restore", Func<HttpContext, _>(fun ctx -> endpoints.Restore ctx |> Async.StartAsTask)) |> ignore
+    app.MapPost("/api/document", Func<HttpContext, _>(fun ctx -> endpoints.CreateOrUpdate ctx |> Async.StartImmediateAsTask)) |> ignore
+    app.MapPost("/api/document/restore", Func<HttpContext, _>(fun ctx -> endpoints.Restore ctx |> Async.StartImmediateAsTask)) |> ignore
     // Colleague approval of a held (over-quota) document.
-    app.MapPost("/api/document/approve", Func<HttpContext, _>(fun ctx -> endpoints.Review(true, ctx) |> Async.StartAsTask)) |> ignore
-    app.MapPost("/api/document/reject", Func<HttpContext, _>(fun ctx -> endpoints.Review(false, ctx) |> Async.StartAsTask)) |> ignore
+    app.MapPost("/api/document/approve", Func<HttpContext, _>(fun ctx -> endpoints.Review(true, ctx) |> Async.StartImmediateAsTask)) |> ignore
+    app.MapPost("/api/document/reject", Func<HttpContext, _>(fun ctx -> endpoints.Review(false, ctx) |> Async.StartImmediateAsTask)) |> ignore
 
     app.Run()
     0
