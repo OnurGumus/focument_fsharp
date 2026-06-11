@@ -1,59 +1,66 @@
-/// The write-side value objects. Title/Content/Username wrap FCQRS's validated
-/// ShortString/LongString (created via ValueLens, returning a Result). The
-/// constructors/extractors live on the types themselves as members rather than in
-/// companion modules.
+/// The write-side value objects, built on FCQRS's ValueLens contract: each type
+/// exposes `Value_` (getter x validating setter) and everything else — the
+/// TryCreate/Value members below, and the generic ValueLens.Value /
+/// ValueLens.TryCreate / ValueLens.Create call styles — derives from it.
+/// Representations are private: the validating constructor is the only door.
 module Values
+
 open System
 open FCQRS.Model.Data
 
 type DocumentId =
-    // private: the only way in is the validating constructor below
     private
     | DocumentId of Guid
 
-    static member Create() = DocumentId(Guid.NewGuid())
-    static member OfGuid g= DocumentId g
+    /// ValueLens contract: DocumentId <-> Guid (total — every Guid is valid).
+    static member Value_ = (fun (DocumentId g) -> g), (fun (g: Guid) _ -> DocumentId g)
+
+    static member Create() : DocumentId = ValueLens.Create(Guid.NewGuid())
+    static member OfGuid(g: Guid) : DocumentId = ValueLens.Create g
 
     static member TryParse(s: string) =
         match Guid.TryParse s with
-        | true, g -> Some(DocumentId g)
+        | true, g -> Some(DocumentId.OfGuid g)
         | _ -> None
 
-    member this.Value = let (DocumentId g) = this in g
-    override this.ToString() = let (DocumentId g) = this in g.ToString()
+    member this.Value: Guid = ValueLens.Value this
+    override this.ToString() = (ValueLens.Value this).ToString()
 
 type Title =
-    // private: the only way in is the validating constructor below
     private
     | Title of ShortString
 
-    static member TryCreate s =
-        match ValueLens.TryCreate s with
-        | Ok ss -> Ok(Title ss)
-        | Error _ -> Error "Invalid title"
+    /// ValueLens contract: Title <-> raw string, validated through ShortString.
+    static member Value_ =
+        (fun (Title s) -> (ValueLens.Value s: string)),
+        (fun (s: string) _ -> ValueLens.TryCreate s |> Result.map Title |> Result.mapError (fun _ -> "Invalid title"))
 
-    member this.Value = let (Title s) = this in ValueLens.Value s
+    static member TryCreate(s: string) : Result<Title, string> = ValueLens.TryCreate s
+    member this.Value: string = ValueLens.Value this
+    override this.ToString() = this.Value
 
 type Content =
-    // private: the only way in is the validating constructor below
     private
     | Content of LongString
 
-    static member TryCreate s=
-        match ValueLens.TryCreate s with
-        | Ok ss -> Ok(Content ss)
-        | Error _ -> Error "Invalid content"
+    /// ValueLens contract: Content <-> raw string, validated through LongString.
+    static member Value_ =
+        (fun (Content s) -> (ValueLens.Value s: string)),
+        (fun (s: string) _ -> ValueLens.TryCreate s |> Result.map Content |> Result.mapError (fun _ -> "Invalid content"))
 
-    member this.Value = let (Content s) = this in ValueLens.Value s
+    static member TryCreate(s: string) : Result<Content, string> = ValueLens.TryCreate s
+    member this.Value: string = ValueLens.Value this
+    override this.ToString() = this.Value
 
 type Username =
-    // private: the only way in is the validating constructor below
     private
     | Username of ShortString
 
-    static member TryCreate s =
-        match ValueLens.TryCreate s with
-        | Ok ss -> Ok(Username ss)
-        | Error _ -> Error "a username is required"
+    /// ValueLens contract: Username <-> raw string, validated through ShortString.
+    static member Value_ =
+        (fun (Username s) -> (ValueLens.Value s: string)),
+        (fun (s: string) _ -> ValueLens.TryCreate s |> Result.map Username |> Result.mapError (fun _ -> "a username is required"))
 
-    member this.Value = let (Username s) = this in ValueLens.Value s
+    static member TryCreate(s: string) : Result<Username, string> = ValueLens.TryCreate s
+    member this.Value: string = ValueLens.Value this
+    override this.ToString() = this.Value
