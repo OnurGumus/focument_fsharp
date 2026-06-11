@@ -44,7 +44,8 @@ type Endpoints
             asyncResult {
                 let! f = ctx.Request.ReadFormAsync() |> Async.AwaitTask
                 let! (owner: Username) =
-                    ValueLens.TryCreate (string f.["Username"])
+                    string f.["Username"]
+                    |> ValueLens.TryCreate
                     |> Result.mapError ((+) "Error: ")
 
                 let existingId = f.["Id"].ToString()
@@ -83,7 +84,8 @@ type Endpoints
                 let! f = ctx.Request.ReadFormAsync() |> Async.AwaitTask
                 let docId = f.["Id"].ToString()
                 let! (owner: Username) =
-                    ValueLens.TryCreate (string f.["Username"])
+                    string f.["Username"]
+                    |> ValueLens.TryCreate
                     |> Result.mapError ((+) "Error: ")
 
                 let! guid =
@@ -132,7 +134,8 @@ type Endpoints
                 let username = f.["Username"].ToString()
 
                 let! (_: Username) =
-                    ValueLens.TryCreate username
+                    username
+                    |> ValueLens.TryCreate
                     |> Result.mapError ((+) "Error: ")
                 do! match Guid.TryParse docId with
                      | true, _ -> Ok()
