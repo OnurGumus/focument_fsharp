@@ -58,8 +58,7 @@ type Endpoints
             use awaiter = subscriptions.Subscribe(cid, 1)
 
             let! result =
-                documents.Send cid aggId (Document.CreateOrUpdate(doc, owner)) (fun e ->
-                    match e with
+                documents.Send cid aggId (Document.CreateOrUpdate(doc, owner)) (function
                     | Document.ApprovedEvt _
                     | Document.HeldForApproval _
                     | Document.Updated _ -> true
@@ -108,8 +107,7 @@ type Endpoints
             use awaiter = subscriptions.Subscribe(cid, 1)
 
             let! _ =
-                documents.Send cid aggId (Document.CreateOrUpdate(doc, owner)) (fun e ->
-                    match e with
+                documents.Send cid aggId (Document.CreateOrUpdate(doc, owner)) (function
                     | Document.Updated _
                     | Document.ApprovedEvt _
                     | Document.HeldForApproval _ -> true
@@ -147,8 +145,7 @@ type Endpoints
             let command = if approve then Document.Approve else Document.Reject
 
             let! _ =
-                documents.Send cid aggId command (fun e ->
-                    match e with
+                documents.Send cid aggId command (function
                     | Document.ApprovedEvt _ -> approve
                     | Document.RejectedEvt _ -> not approve
                     | _ -> false)
