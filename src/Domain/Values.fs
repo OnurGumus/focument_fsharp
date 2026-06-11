@@ -7,6 +7,8 @@ open System
 open FCQRS.Model.Data
 
 type DocumentId =
+    // private: the only way in is the validating constructor below
+    private
     | DocumentId of Guid
 
     static member Create() = DocumentId(Guid.NewGuid())
@@ -21,6 +23,8 @@ type DocumentId =
     override this.ToString() = let (DocumentId g) = this in g.ToString()
 
 type Title =
+    // private: the only way in is the validating constructor below
+    private
     | Title of ShortString
 
     static member TryCreate s =
@@ -31,6 +35,8 @@ type Title =
     member this.Value = let (Title s) = this in ValueLens.Value s
 
 type Content =
+    // private: the only way in is the validating constructor below
+    private
     | Content of LongString
 
     static member TryCreate s=
@@ -41,6 +47,8 @@ type Content =
     member this.Value = let (Content s) = this in ValueLens.Value s
 
 type Username =
+    // private: the only way in is the validating constructor below
+    private
     | Username of ShortString
 
     static member TryCreate s =
