@@ -13,6 +13,7 @@ open System
 open Microsoft.AspNetCore.Http
 open FsToolkit.ErrorHandling
 open FCQRS.FSharp
+open FCQRS.Model.Data
 open Values
 
 module private Reply =
@@ -42,7 +43,7 @@ type Endpoints
         Reply.respond (
             asyncResult {
                 let! f = ctx.Request.ReadFormAsync() |> Async.AwaitTask
-                let! owner = Username.TryCreate(f.["Username"].ToString()) |> Result.mapError (fun _ -> "Error: a username is required")
+                let! owner = (ValueLens.TryCreate(f.["Username"].ToString()): Result<Username, _>) |> Result.mapError (fun _ -> "Error: a username is required")
 
                 let existingId = f.["Id"].ToString()
                 let docId = if String.IsNullOrEmpty existingId then Guid.NewGuid() else Guid.Parse existingId
@@ -79,7 +80,7 @@ type Endpoints
             asyncResult {
                 let! f = ctx.Request.ReadFormAsync() |> Async.AwaitTask
                 let docId = f.["Id"].ToString()
-                let! owner = Username.TryCreate(f.["Username"].ToString()) |> Result.mapError (fun _ -> "Error: a username is required")
+                let! owner = (ValueLens.TryCreate(f.["Username"].ToString()): Result<Username, _>) |> Result.mapError (fun _ -> "Error: a username is required")
 
                 let! guid =
                     match Guid.TryParse docId with
@@ -126,7 +127,7 @@ type Endpoints
                 let docId = f.["Id"].ToString()
                 let username = f.["Username"].ToString()
 
-                let! _ = Username.TryCreate username |> Result.mapError (fun _ -> "Error: a username is required")
+                let! _ = (ValueLens.TryCreate username: Result<Username, _>) |> Result.mapError (fun _ -> "Error: a username is required")
                 do! match Guid.TryParse docId with
                      | true, _ -> Ok()
                      | _ -> Error "Error: invalid document id"

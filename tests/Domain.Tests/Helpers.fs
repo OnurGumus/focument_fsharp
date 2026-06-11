@@ -34,9 +34,9 @@ let event version at details =
       Version = ValueLens.TryCreate version |> Result.value
       Metadata = Map.empty }
 
-let title t = match Title.TryCreate t with Ok x -> x | Error e -> failwith e
-let content c = match Content.TryCreate c with Ok x -> x | Error e -> failwith e
-let username u = match Username.TryCreate u with Ok x -> x | Error e -> failwith e
+let title t : Title = match ValueLens.TryCreate t with Ok x -> x | Error (e: string) -> failwith e
+let content c : Content = match ValueLens.TryCreate c with Ok x -> x | Error (e: string) -> failwith e
+let username u : Username = match ValueLens.TryCreate u with Ok x -> x | Error (e: string) -> failwith e
 
 let docRoot id t c : Document.Root =
     { Id = DocumentId.OfGuid id; Title = title t; Content = content c }

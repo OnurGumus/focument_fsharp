@@ -23,7 +23,6 @@ type DocumentId =
         | true, g -> Some(DocumentId.OfGuid g)
         | _ -> None
 
-    member this.Value: Guid = ValueLens.Value this
     override this.ToString() = (ValueLens.Value this).ToString()
 
 type Title =
@@ -35,9 +34,8 @@ type Title =
         (fun (Title s) -> (ValueLens.Value s: string)),
         (fun (s: string) _ -> ValueLens.TryCreate s |> Result.map Title |> Result.mapError (fun _ -> "Invalid title"))
 
-    static member TryCreate(s: string) : Result<Title, string> = ValueLens.TryCreate s
-    member this.Value: string = ValueLens.Value this
-    override this.ToString() = this.Value
+    member this.IsValid = ValueLens.IsValidValue this
+    override this.ToString() = (ValueLens.Value this: string)
 
 type Content =
     private
@@ -48,9 +46,8 @@ type Content =
         (fun (Content s) -> (ValueLens.Value s: string)),
         (fun (s: string) _ -> ValueLens.TryCreate s |> Result.map Content |> Result.mapError (fun _ -> "Invalid content"))
 
-    static member TryCreate(s: string) : Result<Content, string> = ValueLens.TryCreate s
-    member this.Value: string = ValueLens.Value this
-    override this.ToString() = this.Value
+    member this.IsValid = ValueLens.IsValidValue this
+    override this.ToString() = (ValueLens.Value this: string)
 
 type Username =
     private
@@ -61,6 +58,5 @@ type Username =
         (fun (Username s) -> (ValueLens.Value s: string)),
         (fun (s: string) _ -> ValueLens.TryCreate s |> Result.map Username |> Result.mapError (fun _ -> "a username is required"))
 
-    static member TryCreate(s: string) : Result<Username, string> = ValueLens.TryCreate s
-    member this.Value: string = ValueLens.Value this
-    override this.ToString() = this.Value
+    member this.IsValid = ValueLens.IsValidValue this
+    override this.ToString() = (ValueLens.Value this: string)

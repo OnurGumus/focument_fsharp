@@ -4,6 +4,7 @@
 module Document
 
 open FCQRS.Common
+open FCQRS.Model.Data
 open Values
 
 /// The document content as carried on the wire (validated).
@@ -11,7 +12,7 @@ type Root =
     { Id: DocumentId; Title: Title; Content: Content }
 
     static member TryCreate(guid, title, content) =
-        match Title.TryCreate title, Content.TryCreate content with
+        match (ValueLens.TryCreate title: Result<Title, _>), (ValueLens.TryCreate content: Result<Content, _>) with
         | Ok t, Ok c -> Ok { Id = DocumentId.OfGuid guid; Title = t; Content = c }
         | Error e, _ -> Error e
         | _, Error e -> Error e

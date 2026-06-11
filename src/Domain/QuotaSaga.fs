@@ -9,6 +9,7 @@
 module QuotaSaga
 
 open FCQRS.Common
+open FCQRS.Model.Data
 open FCQRS.FSharp
 open Values
 
@@ -42,7 +43,7 @@ let private handleEvent evt sagaState =
 let private applySideEffects documentFactory userFactory sagaState _recovering =
     match sagaState.State with
     // Ask the User aggregate (keyed by the owner's username) to consume a slot.
-    | CheckingQuota(owner, docId) -> Stay, [ toAggregate userFactory owner.Value (User.ConsumeQuota docId) ]
+    | CheckingQuota(owner, docId) -> Stay, [ toAggregate userFactory (ValueLens.Value owner: string) (User.ConsumeQuota docId) ]
     // Quota ok -> tell the originating Document to approve.
     | Approving _ -> Stay, [ toOriginator documentFactory Document.Approve ]
     // Over quota -> park for a colleague.

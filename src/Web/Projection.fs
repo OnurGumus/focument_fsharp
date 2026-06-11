@@ -31,14 +31,14 @@ let handle (loggerFactory: ILoggerFactory) connString offsetValue (eventObj: obj
         // NOT notified — the web waits for the saga's terminal verdict below.
         | Document.CreateOrUpdateRequested(doc, owner) ->
             let id = doc.Id.ToString()
-            let title = doc.Title.Value
-            let body = doc.Content.Value
+            let title: string = ValueLens.Value doc.Title
+            let body: string = ValueLens.Value doc.Content
             exec conn tx
                 """
                 INSERT INTO Documents (Id, Title, Body, Version, CreatedAt, UpdatedAt, ApprovalStatus, Owner)
                 VALUES (@Id, @Title, @Body, 1, @Now, @Now, 'Pending', @Owner)
                 """
-                ({| Id = id; Title = title; Body = body; Now = now; Owner = owner.Value |} :> obj)
+                ({| Id = id; Title = title; Body = body; Now = now; Owner = (ValueLens.Value owner: string) |} :> obj)
             exec conn tx
                 "INSERT OR IGNORE INTO DocumentVersions (Id, Version, Title, Body, CreatedAt) VALUES (@Id, 1, @Title, @Body, @Now)"
                 ({| Id = id; Title = title; Body = body; Now = now |} :> obj)
@@ -47,8 +47,8 @@ let handle (loggerFactory: ILoggerFactory) connString offsetValue (eventObj: obj
         // A plain edit — new content/version; approval status + owner kept.
         | Document.Updated doc ->
             let id = doc.Id.ToString()
-            let title = doc.Title.Value
-            let body = doc.Content.Value
+            let title: string = ValueLens.Value doc.Title
+            let body: string = ValueLens.Value doc.Content
             let maxV = conn.ExecuteScalar("SELECT COALESCE(MAX(Version), 0) FROM DocumentVersions WHERE Id = @Id", ({| Id = id |} :> obj), tx) |> Convert.ToInt64
             let version = maxV + 1L
             exec conn tx
