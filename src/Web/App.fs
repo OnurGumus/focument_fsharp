@@ -5,6 +5,7 @@
 /// fresh Endpoints instance.
 module App
 
+open FCQRS.Common
 open FCQRS.FSharp
 open Focument
 
@@ -17,10 +18,10 @@ let build config loggerFactory connString =
 
     // Aggregates first — registering them yields typed handles (factory + send).
     let documents =
-        Fcqrs.aggregate api { Name = "Document"; Initial = Document.initial; Decide = Document.decide; Fold = Document.fold }
+        Fcqrs.aggregate api { Name = "Document"; Initial = Document.initial; Decide = Document.decide; Fold = Document.fold; Snapshots = SnapshotPolicy.Default }
 
     let users =
-        Fcqrs.aggregate api { Name = "User"; Initial = User.initial; Decide = User.decide; Fold = User.fold }
+        Fcqrs.aggregate api { Name = "User"; Initial = User.initial; Decide = User.decide; Fold = User.fold; Snapshots = SnapshotPolicy.Default }
 
     // The saga is built from the two aggregates' factories (cross-reference
     // resolved by ordinary scope), then registered and wired into the starter.

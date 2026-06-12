@@ -63,4 +63,5 @@ let definition documentFactory userFactory =
       Originator = documentFactory
       HandleEvent = handleEvent
       ApplySideEffects = applySideEffects documentFactory userFactory
-      StartOn = startsOn }
+      StartOn = startsOn
+      Snapshots = Default }

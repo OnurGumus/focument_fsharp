@@ -14,7 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Domain\Domain.fsproj" />
-    <PackageReference Include="FCQRS" Version="6.0.0-preview14" />
+    <PackageReference Include="FCQRS" Version="6.0.0-preview21" />
     <PackageReference Include="FsToolkit.ErrorHandling" Version="5.*" />
     <PackageReference Include="FCQRS.Model" Version="6.0.0-*" />
     <PackageReference Include="Dapper" Version="2.*" />
