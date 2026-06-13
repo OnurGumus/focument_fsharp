@@ -18,10 +18,10 @@ let build config loggerFactory connString =
 
     // Aggregates first — registering them yields typed handles (factory + send).
     let documents =
-        Fcqrs.aggregate api { Name = "Document"; Initial = Document.initial; Decide = Document.decide; Fold = Document.fold; Snapshots = SnapshotPolicy.Default }
+        Fcqrs.aggregate api { Name = "Document"; Initial = Document.initial; Decide = Document.decide; Fold = Document.fold; Snapshots = Default }
 
     let users =
-        Fcqrs.aggregate api { Name = "User"; Initial = User.initial; Decide = User.decide; Fold = User.fold; Snapshots = SnapshotPolicy.Default }
+        Fcqrs.aggregate api { Name = "User"; Initial = User.initial; Decide = User.decide; Fold = User.fold; Snapshots = Default }
 
     // The saga is built from the two aggregates' factories (cross-reference
     // resolved by ordinary scope), then registered and wired into the starter.
@@ -34,6 +34,6 @@ let build config loggerFactory connString =
     // handler returns Publish/Suppress per event (FCQRS.FSharp.Projection.filtered
     // qualified to dodge the local Projection module name).
     let subscriptions =
-        Fcqrs.projection api (FCQRS.FSharp.Projection.filtered (int (Db.getLastOffset connString)) (Projection.handle loggerFactory connString))
+        Fcqrs.projection api (Projection.filtered (int (Db.getLastOffset connString)) (Projection.handle loggerFactory connString))
 
     Endpoints(connString, subscriptions, documents)
