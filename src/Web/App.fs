@@ -30,8 +30,10 @@ let build config loggerFactory connString =
 
     Fcqrs.wireSagaStarters api [ quota ]
 
-    // Projection last, resuming from the last committed offset.
+    // Projection last, resuming from the last committed offset. The filtered
+    // handler returns Publish/Suppress per event (FCQRS.FSharp.Projection.filtered
+    // qualified to dodge the local Projection module name).
     let subscriptions =
-        Fcqrs.projection api { LastOffset = int (Db.getLastOffset connString); Handle = Projection.handle loggerFactory connString }
+        Fcqrs.projection api (FCQRS.FSharp.Projection.filtered (int (Db.getLastOffset connString)) (Projection.handle loggerFactory connString))
 
     Endpoints(connString, subscriptions, documents)

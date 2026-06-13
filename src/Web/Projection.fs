@@ -1,7 +1,8 @@
 /// The projection: folds the Document event stream into the SQLite read model,
-/// advancing the offset in the same transaction. Returns the events to re-publish
-/// to subscribers (read-your-writes) — only terminal events, never the initial
-/// pending request. Mirrors the C# Projection.HandleEventWrapper.
+/// advancing the offset in the same transaction. Returns Publish to re-publish the
+/// event to subscribers (read-your-writes), or Suppress to update silently — the
+/// initial pending request is suppressed; only terminal events wake the web.
+/// Mirrors the C# Projection.HandleEventWrapper.
 module Projection
 
 open System
@@ -20,7 +21,7 @@ let handle (loggerFactory: ILoggerFactory) connString offsetValue (eventObj: obj
     use conn = new SqliteConnection(connString)
     conn.Open()
     use tx = conn.BeginTransaction()
-    let mutable notify : IMessageWithCID list = []
+    let mutable verdict = Suppress
 
     match eventObj with
     | :? (Event<Document.Event>) as docEvent ->
@@ -57,21 +58,21 @@ let handle (loggerFactory: ILoggerFactory) connString offsetValue (eventObj: obj
             exec conn tx
                 "INSERT OR IGNORE INTO DocumentVersions (Id, Version, Title, Body, CreatedAt) VALUES (@Id, @Version, @Title, @Body, @Now)"
                 ({| Id = id; Version = version; Title = title; Body = body; Now = now |} :> obj)
-            notify <- [ docEvent ]
+            verdict <- Publish
 
         // Terminal verdicts — flip the approval status.
         | Document.ApprovedEvt docId ->
             exec conn tx "UPDATE Documents SET ApprovalStatus = 'Approved', UpdatedAt = @Now WHERE Id = @Id" ({| Id = docId.ToString(); Now = now |} :> obj)
-            notify <- [ docEvent ]
+            verdict <- Publish
         | Document.HeldForApproval docId ->
             exec conn tx "UPDATE Documents SET ApprovalStatus = 'AwaitingApproval', UpdatedAt = @Now WHERE Id = @Id" ({| Id = docId.ToString(); Now = now |} :> obj)
-            notify <- [ docEvent ]
+            verdict <- Publish
         | Document.RejectedEvt docId ->
             exec conn tx "UPDATE Documents SET ApprovalStatus = 'Rejected', UpdatedAt = @Now WHERE Id = @Id" ({| Id = docId.ToString(); Now = now |} :> obj)
-            notify <- [ docEvent ]
+            verdict <- Publish
         | Document.Errored _ -> ()
     | _ -> ()
 
     exec conn tx "UPDATE Offsets SET OffsetCount = @Offset WHERE OffsetName = 'DocumentProjection'" ({| Offset = offsetValue |} :> obj)
     tx.Commit()
-    notify
+    verdict
