@@ -4,6 +4,7 @@
 module Document
 
 open FCQRS.Common
+open FCQRS.FSharp
 open FCQRS.Model.Data
 open Values
 
@@ -56,17 +57,12 @@ let decide (cmd: Command<_>) state =
     | CreateOrUpdate(doc, _), Some existing when existing.Id = doc.Id -> Updated doc |> PersistEvent
     // Wrong id routed here.
     | CreateOrUpdate _, _ -> Errored DocumentNotFound |> DeferEvent
-    // Verdicts — idempotent: if already in the target state, defer (still published
-    // so a re-issuing saga sees it) rather than persist a duplicate.
-    | Approve, Some doc ->
-        let e = ApprovedEvt doc.Id
-        if state.Approval = Approved then DeferEvent e else PersistEvent e
-    | Reject, Some doc ->
-        let e = RejectedEvt doc.Id
-        if state.Approval = Rejected then DeferEvent e else PersistEvent e
-    | Hold, Some doc ->
-        let e = HeldForApproval doc.Id
-        if state.Approval = AwaitingApproval then DeferEvent e else PersistEvent e
+    // Verdicts — idempotent: persistIf persists only when not already in the
+    // target state; otherwise it defers (still published so a re-issuing saga sees
+    // it) rather than writing a duplicate.
+    | Approve, Some doc -> ApprovedEvt doc.Id |> persistIf (state.Approval <> Approved)
+    | Reject, Some doc -> RejectedEvt doc.Id |> persistIf (state.Approval <> Rejected)
+    | Hold, Some doc -> HeldForApproval doc.Id |> persistIf (state.Approval <> AwaitingApproval)
     | _ -> UnhandledEvent
 
 /// fold: event + current state -> next state (pure).

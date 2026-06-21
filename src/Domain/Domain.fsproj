@@ -13,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="FCQRS" Version="6.0.0-preview26" />
+    <PackageReference Include="FCQRS" Version="6.0.0-preview27" />
     <PackageReference Include="FCQRS.Model" Version="6.0.0-*" />
   </ItemGroup>
 
