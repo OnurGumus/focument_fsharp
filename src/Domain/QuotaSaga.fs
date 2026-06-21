@@ -33,7 +33,7 @@ let private (|UserEvent|_|) (o: obj) =
 
 let private handleEvent evt sagaState =
     match evt, sagaState.State with
-    | DocEvent(Document.CreateOrUpdateRequested(doc, owner)), None -> CheckingQuota(owner, doc.Id) |> StateChangedEvent
+    | DocEvent(Document.CreateOrUpdateRequested(doc, owner, _)), None -> CheckingQuota(owner, doc.Id) |> StateChangedEvent
     | UserEvent(User.QuotaApproved _), Some(CheckingQuota(_, docId)) -> Approving docId |> StateChangedEvent
     | UserEvent User.QuotaRejected, Some(CheckingQuota(_, docId)) -> Holding docId |> StateChangedEvent
     | DocEvent(Document.ApprovedEvt _), Some(Approving _) -> Done |> StateChangedEvent

@@ -34,8 +34,8 @@ type Command =
     | Hold
 
 type Event =
-    | CreateOrUpdateRequested of Root * Username
-    | Updated of Root
+    | CreateOrUpdateRequested of Root * Username * int64   // owner, document version
+    | Updated of Root * int64                              // document version
     | Errored of DocumentError
     | ApprovedEvt of DocumentId
     | RejectedEvt of DocumentId
@@ -52,9 +52,9 @@ let initial = { Document = None; Version = 0L; Approval = Pending }
 let decide (cmd: Command<_>) state =
     match cmd.CommandDetails, state.Document with
     // First write — no document yet. Pending request that starts the quota saga.
-    | CreateOrUpdate(doc, owner), None -> CreateOrUpdateRequested(doc, owner) |> PersistEvent
+    | CreateOrUpdate(doc, owner), None -> CreateOrUpdateRequested(doc, owner, state.Version + 1L) |> PersistEvent
     // Edit of the document we already hold — no saga, no quota.
-    | CreateOrUpdate(doc, _), Some existing when existing.Id = doc.Id -> Updated doc |> PersistEvent
+    | CreateOrUpdate(doc, _), Some existing when existing.Id = doc.Id -> Updated(doc, state.Version + 1L) |> PersistEvent
     // Wrong id routed here.
     | CreateOrUpdate _, _ -> Errored DocumentNotFound |> DeferEvent
     // Verdicts — idempotent: persistIf persists only when not already in the
@@ -68,8 +68,8 @@ let decide (cmd: Command<_>) state =
 /// fold: event + current state -> next state (pure).
 let fold evt state =
     match evt.EventDetails with
-    | CreateOrUpdateRequested(doc, _) -> { state with Document = Some doc; Version = state.Version + 1L; Approval = Pending }
-    | Updated doc -> { state with Document = Some doc; Version = state.Version + 1L }
+    | CreateOrUpdateRequested(doc, _, v) -> { state with Document = Some doc; Version = v; Approval = Pending }
+    | Updated(doc, v) -> { state with Document = Some doc; Version = v }
     | ApprovedEvt _ -> { state with Approval = Approved }
     | RejectedEvt _ -> { state with Approval = Rejected }
     | HeldForApproval _ -> { state with Approval = AwaitingApproval }

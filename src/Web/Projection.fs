@@ -30,28 +30,26 @@ let handle (loggerFactory: ILoggerFactory) connString offsetValue (eventObj: obj
         match docEvent.EventDetails with
         // A brand-new pending document (creation only). Records the owner + v1.
         // NOT notified — the web waits for the saga's terminal verdict below.
-        | Document.CreateOrUpdateRequested(doc, owner) ->
+        | Document.CreateOrUpdateRequested(doc, owner, version) ->
             let id = doc.Id.ToString()
             let title: string = ValueLens.Value doc.Title
             let body: string = ValueLens.Value doc.Content
             exec conn tx
                 """
                 INSERT INTO Documents (Id, Title, Body, Version, CreatedAt, UpdatedAt, ApprovalStatus, Owner)
-                VALUES (@Id, @Title, @Body, 1, @Now, @Now, 'Pending', @Owner)
+                VALUES (@Id, @Title, @Body, @Version, @Now, @Now, 'Pending', @Owner)
                 """
-                ({| Id = id; Title = title; Body = body; Now = now; Owner = (ValueLens.Value owner: string) |} :> obj)
+                ({| Id = id; Title = title; Body = body; Version = version; Now = now; Owner = (ValueLens.Value owner: string) |} :> obj)
             exec conn tx
-                "INSERT OR IGNORE INTO DocumentVersions (Id, Version, Title, Body, CreatedAt) VALUES (@Id, 1, @Title, @Body, @Now)"
-                ({| Id = id; Title = title; Body = body; Now = now |} :> obj)
-            log.LogInformation("projected {Id} v1 (pending) at offset {Offset}", id, offsetValue)
+                "INSERT OR IGNORE INTO DocumentVersions (Id, Version, Title, Body, CreatedAt) VALUES (@Id, @Version, @Title, @Body, @Now)"
+                ({| Id = id; Version = version; Title = title; Body = body; Now = now |} :> obj)
+            log.LogInformation("projected {Id} v{Version} (pending) at offset {Offset}", id, version, offsetValue)
 
         // A plain edit — new content/version; approval status + owner kept.
-        | Document.Updated doc ->
+        | Document.Updated(doc, version) ->
             let id = doc.Id.ToString()
             let title: string = ValueLens.Value doc.Title
             let body: string = ValueLens.Value doc.Content
-            let maxV = conn.ExecuteScalar("SELECT COALESCE(MAX(Version), 0) FROM DocumentVersions WHERE Id = @Id", ({| Id = id |} :> obj), tx) |> Convert.ToInt64
-            let version = maxV + 1L
             exec conn tx
                 "UPDATE Documents SET Title = @Title, Body = @Body, Version = @Version, UpdatedAt = @Now WHERE Id = @Id"
                 ({| Id = id; Title = title; Body = body; Version = version; Now = now |} :> obj)

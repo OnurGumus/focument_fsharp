@@ -17,7 +17,7 @@ let tests =
               let d = docRoot (Guid.NewGuid()) "Title" "Body"
               let owner = username "alice"
               let action = Document.decide (command now (Document.CreateOrUpdate(d, owner))) Document.initial
-              Expect.equal action (PersistEvent(Document.CreateOrUpdateRequested(d, owner))) "persist requested"
+              Expect.equal action (PersistEvent(Document.CreateOrUpdateRequested(d, owner, 1L))) "persist requested"
           }
 
           test "edit with matching id persists Updated" {
@@ -25,7 +25,7 @@ let tests =
               let state = { Document.initial with Document = Some(docRoot id "T" "B"); Version = 1L }
               let edited = docRoot id "New" "New body"
               let action = Document.decide (command now (Document.CreateOrUpdate(edited, username "alice"))) state
-              Expect.equal action (PersistEvent(Document.Updated edited)) "persist updated"
+              Expect.equal action (PersistEvent(Document.Updated(edited, 2L))) "persist updated"
           }
 
           test "command for a different id defers DocumentNotFound" {
@@ -52,7 +52,7 @@ let tests =
 
           test "fold CreateOrUpdateRequested stores doc, bumps version, pending" {
               let d = docRoot (Guid.NewGuid()) "T" "B"
-              let state = Document.fold (event 1L now (Document.CreateOrUpdateRequested(d, username "alice"))) Document.initial
+              let state = Document.fold (event 1L now (Document.CreateOrUpdateRequested(d, username "alice", 1L))) Document.initial
               Expect.equal state.Document (Some d) "doc stored"
               Expect.equal state.Version 1L "version 1"
               Expect.equal state.Approval Document.Pending "pending"
@@ -62,7 +62,7 @@ let tests =
               let id = Guid.NewGuid()
               let before =
                   { Document.initial with Document = Some(docRoot id "T" "B"); Version = 1L; Approval = Document.Approved }
-              let after = Document.fold (event 2L now (Document.Updated(docRoot id "T2" "B2"))) before
+              let after = Document.fold (event 2L now (Document.Updated(docRoot id "T2" "B2", 2L))) before
               Expect.equal after.Version 2L "version 2"
               Expect.equal after.Approval Document.Approved "approval kept"
           } ]
